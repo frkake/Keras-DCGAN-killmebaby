@@ -1,5 +1,3 @@
-from __future__ import print_function, division
-
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout
 from keras.layers import BatchNormalization, Activation, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU
@@ -16,6 +14,7 @@ import cv2
 import numpy as np
 
 np.random.seed(0)
+np.random.RandomState(0)
 tf.set_random_seed(0)
 
 config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
@@ -23,9 +22,6 @@ session = tf.Session(config=config)
 tensorflow_backend.set_session(session)
 
 root_dir = "/home/takusub/PycharmProjects/Samples/dcgan/kill_me_baby_datasets/"
-
-r, c = 5, 5
-check_noise = np.random.uniform(-1, 1, (r * c, 100))
 
 
 class DCGAN():
@@ -44,7 +40,7 @@ class DCGAN():
         self.generator = self.build_generator()
         # self.generator.compile(loss='binary_crossentropy', optimizer=optimizer)
 
-        z = Input(shape=(100,))
+        z = Input(shape=(self.z_dim,))
         img = self.generator(z)
 
         self.discriminator.trainable = False
@@ -117,19 +113,15 @@ class DCGAN():
 
         return model
 
-    def train(self, epochs, batch_size=128, save_interval=50):
-
+    def train(self, iterations, batch_size=128, save_interval=50, model_interval=1000, check_noise=None, r=5, c=5):
 
         X_train, labels = self.load_imgs()
-
 
         half_batch = int(batch_size / 2)
 
         X_train = (X_train.astype(np.float32) - 127.5) / 127.5
 
-
-
-        for epoch in range(epochs):
+        for iteration in range(iterations):
 
             # ------------------
             # Training Discriminator
@@ -155,22 +147,22 @@ class DCGAN():
 
             g_loss = self.combined.train_on_batch(noise, np.ones((batch_size, 1)))
 
-            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100 * d_loss[1], g_loss))
+            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (iteration, d_loss[0], 100 * d_loss[1], g_loss))
 
-            if epoch % save_interval == 0:
-                self.save_imgs(epoch)
+            if iteration % save_interval == 0:
+                self.save_imgs(iteration, check_noise, r, c)
                 start = np.expand_dims(check_noise[0], axis=0)
                 end = np.expand_dims(check_noise[1], axis=0)
                 resultImage = self.visualizeInterpolation(start=start, end=end)
-                cv2.imwrite("images/latent/" + "latent_{}.png".format(epoch), resultImage)
+                cv2.imwrite("images/latent/" + "latent_{}.png".format(iteration), resultImage)
+                if iteration % model_interval == 0:
+                    self.generator.save("ganmodels/dcgan-{}-iter.h5".format(iteration))
 
-    def save_imgs(self, epoch):
-        r, c = 5, 5
-        noise = np.random.uniform(-1, 1, (r * c, 100))
+    def save_imgs(self, iteration, check_noise, r, c):
         noise = check_noise
         gen_imgs = self.generator.predict(noise)
 
-        #0-1 rescale
+        # 0-1 rescale
         gen_imgs = 0.5 * gen_imgs + 0.5
 
         fig, axs = plt.subplots(r, c)
@@ -180,7 +172,7 @@ class DCGAN():
                 axs[i, j].imshow(gen_imgs[cnt, :, :, :])
                 axs[i, j].axis('off')
                 cnt += 1
-        fig.savefig('images/gen_imgs/kill_me_%d.png' % epoch)
+        fig.savefig('images/gen_imgs/kill_me_%d.png' % iteration)
 
         plt.close()
 
@@ -223,7 +215,6 @@ class DCGAN():
         startImg = self.generator.predict(latentStart)
         endImg = self.generator.predict(latentEnd)
 
-
         vectors = []
 
         alphaValues = np.linspace(0, 1, steps)
@@ -248,4 +239,7 @@ class DCGAN():
 
 if __name__ == '__main__':
     dcgan = DCGAN()
-    dcgan.train(epochs=50000, batch_size=32, save_interval=50)
+    r, c = 5, 5
+    check_noise = np.random.uniform(-1, 1, (r * c, 100))
+    dcgan.train(iterations=200000, batch_size=32, save_interval=1000, model_interval=5000, check_noise=check_noise, r=r,
+                c=c)
