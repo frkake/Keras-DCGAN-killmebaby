@@ -1,5 +1,6 @@
 # Killme_DCGAN
 Generate "Kill me baby" images by DCGAN
+https://qiita.com/taku-buntu/items/0093a68bfae0b0ff879d
 
 # Usage
 Before you run dcgan.py, you need to unrar kill_me_baby_datasets.rar. 
