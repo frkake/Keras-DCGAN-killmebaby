@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import os
 import cv2
 import numpy as np
+import rarfile as rar
+from pathlib import Path
 
 np.random.seed(0)
 np.random.RandomState(0)
@@ -21,7 +23,7 @@ config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
 session = tf.Session(config=config)
 tensorflow_backend.set_session(session)
 
-root_dir = "/home/takusub/PycharmProjects/Samples/dcgan/kill_me_baby_datasets/"
+root_dir = str(Path('kill_me_baby_datasets').resolve())
 
 
 class DCGAN():
@@ -149,6 +151,8 @@ class DCGAN():
 
             print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (iteration, d_loss[0], 100 * d_loss[1], g_loss))
 
+            model_dir = Path('ganmodels')
+            model_dir.mkdir(exist_ok=True)
             if iteration % save_interval == 0:
                 self.save_imgs(iteration, check_noise, r, c)
                 start = np.expand_dims(check_noise[0], axis=0)
@@ -156,7 +160,7 @@ class DCGAN():
                 resultImage = self.visualizeInterpolation(start=start, end=end)
                 cv2.imwrite("images/latent/" + "latent_{}.png".format(iteration), resultImage)
                 if iteration % model_interval == 0:
-                    self.generator.save("ganmodels/dcgan-{}-iter.h5".format(iteration))
+                    self.generator.save(str(model_dir)+"/dcgan-{}-iter.h5".format(iteration))
 
     def save_imgs(self, iteration, check_noise, r, c):
         noise = check_noise
@@ -238,8 +242,11 @@ class DCGAN():
 
 
 if __name__ == '__main__':
+    datarar = rar.RarFile('kill_me_baby_datasets.rar')
+    datarar.extractall()
+
     dcgan = DCGAN()
     r, c = 5, 5
     check_noise = np.random.uniform(-1, 1, (r * c, 100))
-    dcgan.train(iterations=200000, batch_size=32, save_interval=1000, model_interval=5000, check_noise=check_noise, r=r,
-                c=c)
+    dcgan.train(iterations=200000, batch_size=32, save_interval=1000,
+                model_interval=5000, check_noise=check_noise, r=r,c=c)
