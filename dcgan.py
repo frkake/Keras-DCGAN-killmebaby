@@ -25,7 +25,6 @@ tensorflow_backend.set_session(session)
 
 root_dir = str(Path('kill_me_baby_datasets').resolve())
 
-
 class DCGAN():
     def __init__(self):
 
